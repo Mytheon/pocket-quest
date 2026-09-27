@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14213d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pocket Quest">
+  <title>Pocket Quest</title>
+  <style>
+    :root{color-scheme:dark; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#0c1425;color:#f3f6fc}
+    *{box-sizing:border-box} body{margin:0;min-height:100svh;background:linear-gradient(150deg,#162844,#0c1425 60%);padding:24px 14px 60px}
+    main{max-width:850px;margin:auto} h1{font-size:1.7rem;margin:0 0 4px} .subtitle{color:#b4c2d9;margin:0 0 20px}
+    .layout{display:grid;gap:16px;grid-template-columns:1.2fr .8fr} .panel{background:#17263d;border:1px solid #344866;border-radius:18px;padding:18px;box-shadow:0 12px 32px #06101b55}
+    .top{display:flex;justify-content:space-between;gap:10px;align-items:start}.muted{color:#b4c2d9}.location{font-size:1.2rem;font-weight:700}.money{text-align:right;font-size:.9rem;line-height:1.6}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0}.stat,.message{background:#22344f;border-radius:12px;padding:12px}.stat{font-size:.93rem}.stat strong{display:block;margin-top:6px;font-size:1rem;white-space:nowrap}
+    .enemy{border:1px solid #6582a8;border-radius:12px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;gap:8px}
+    .message{min-height:78px;line-height:1.5;margin-bottom:14px}.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    button{min-height:52px;border:1px solid #7892b5;border-radius:12px;background:#263d5b;color:#fff;font:inherit;font-weight:600;padding:9px;touch-action:manipulation;cursor:pointer}button.primary{background:#5a73d5;border-color:#8192ed}button:active{transform:scale(.98)}button:disabled{opacity:.65;cursor:default}
+    aside h2{font-size:1rem;margin:0 0 10px}aside p{font-size:.91rem;color:#c0cce0;line-height:1.5;margin:0 0 10px}#restart{width:100%;margin-top:12px}.hidden{display:none!important}
+    @media(max-width:660px){.layout{grid-template-columns:1fr}.stats{margin:14px 0}.panel{padding:15px}body{padding-top:20px}}
+    @media(max-width:350px){.stat{padding:9px;font-size:.82rem}.stat strong{font-size:.9rem}}
+  </style>
+</head>
+<body>
+<main id="game">
+  <h1>Pocket Quest</h1><p class="subtitle">A tiny adventure you can play anywhere.</p>
+  <div class="layout">
+    <section class="panel" aria-label="Game">
+      <div class="top"><div><div class="muted">Level <span id="level">1</span> Adventurer</div><div id="location" class="location">Town</div></div><div class="money">💰 <span id="gold">0</span> Gold<br>⭐ <span id="xp">0</span>/<span id="xpNeed">10</span> XP</div></div>
+      <div class="stats"><div class="stat"><span class="muted">HP</span><strong>❤️ <span id="hp">10</span>/<span id="maxHp">10</span></strong></div><div class="stat"><span class="muted">Attack</span><strong>⚔️ <span id="atk">2</span></strong></div><div class="stat"><span class="muted">Armor</span><strong>🛡️ <span id="armor">0</span></strong></div></div>
+      <div id="enemyPanel" class="enemy hidden"><strong id="enemyName"></strong><span>❤️ <span id="enemyHp"></span>/<span id="enemyMax"></span></span></div>
+      <div id="message" class="message" role="status" aria-live="polite">You arrive in a small frontier town with nothing but your clothes. The road outside leads into the wilds.</div>
+      <div id="townActions" class="actions"><button id="explore" class="primary">🗺️ Explore</button><button id="rest">🛏️ Rest (2 Gold)</button><button id="sword">⚔️ Iron Sword (12)</button><button id="armorBuy">🛡️ Leather Armor (10)</button></div>
+      <div id="fightActions" class="actions hidden"><button id="attack" class="primary">⚔️ Attack</button><button id="flee">🏃 Flee</button></div>
+    </section>
+    <aside class="panel"><h2>How this little RPG works</h2><p>Explore to encounter monsters. Your Attack always deals that much damage.</p><p>Enemy damage is reduced by Armor, to a minimum of 1. Defeating enemies earns Gold and XP.</p><p>Every level gives +5 maximum HP and +1 Attack and fully heals you.</p><p>The sword and armor are permanent one-time purchases. Your progress saves automatically on this device.</p><button id="restart">Restart Game</button></aside>
+  </div>
+</main>
+<script>
+(()=>{
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const initial=()=>({level:1,xp:0,gold:0,hp:10,maxHp:10,atk:2,armor:0,sword:false,armorBought:false,enemy:null});
+  const enemies=[{name:'Green Slime',hp:4,atk:1,gold:3,xp:3},{name:'Giant Rat',hp:6,atk:2,gold:4,xp:4},{name:'Goblin',hp:9,atk:3,gold:6,xp:6}];
+  const saveKey='pocket-quest-save-v1';
+  let s=initial();
+  try{const loaded=JSON.parse(localStorage.getItem(saveKey));if(loaded&&Number.isInteger(loaded.level)&&loaded.level>=1&&Number.isFinite(loaded.hp)&&typeof loaded.sword==='boolean'&&typeof loaded.armorBought==='boolean')s={...initial(),...loaded};}catch(_){}
+  const need=()=>s.level*10;
+  function msg(t){$('message').textContent=t}
+  function draw(){
+    $('level').textContent=s.level;$('xp').textContent=s.xp;$('xpNeed').textContent=need();$('gold').textContent=s.gold;
+    $('hp').textContent=s.hp;$('maxHp').textContent=s.maxHp;$('atk').textContent=s.atk;$('armor').textContent=s.armor;
+    $('sword').textContent=s.sword?'✓ Iron Sword owned':'⚔️ Iron Sword (12)';$('armorBuy').textContent=s.armorBought?'✓ Leather Armor owned':'🛡️ Leather Armor (10)';
+    $('sword').disabled=s.sword;$('armorBuy').disabled=s.armorBought;
+    const fighting=!!s.enemy;$('townActions').classList.toggle('hidden',fighting);$('fightActions').classList.toggle('hidden',!fighting);$('enemyPanel').classList.toggle('hidden',!fighting);$('location').textContent=fighting?'The Wilds':'Town';
+    if(fighting){$('enemyName').textContent=s.enemy.name;$('enemyHp').textContent=s.enemy.hp;$('enemyMax').textContent=s.enemy.maxHp}
+    try{localStorage.setItem(saveKey,JSON.stringify(s))}catch(_){}
+  }
+  function levelCheck(){let gained=0;while(s.xp>=need()){s.xp-=need();s.level++;s.maxHp+=5;s.atk++;s.hp=s.maxHp;gained++}return gained}
+  $('explore').addEventListener('click',()=>{const base=enemies[Math.floor(Math.random()*enemies.length)];s.enemy={...base,maxHp:base.hp};msg('A '+base.name+' blocks the road!');draw()});
+  $('attack').addEventListener('click',()=>{if(!s.enemy)return;const e=s.enemy;e.hp-=s.atk;if(e.hp<=0){const {name,gold,xp}=e;s.gold+=gold;s.xp+=xp;s.enemy=null;const gained=levelCheck();msg('You defeated the '+name+'! You gain '+gold+' Gold and '+xp+' XP.'+(gained?' Level up! You are now level '+s.level+'. HP restored!':''));draw();return}
+    const dmg=Math.max(1,e.atk-s.armor);s.hp-=dmg;if(s.hp<=0){s.gold=Math.max(0,s.gold-3);s.hp=s.maxHp;s.enemy=null;msg('You were defeated and wake up in town. You lost up to 3 Gold.')}else msg('You deal '+s.atk+' damage. The '+e.name+' hits back for '+dmg+'.');draw()});
+  $('flee').addEventListener('click',()=>{s.enemy=null;msg('You escape safely back to town.');draw()});
+  $('rest').addEventListener('click',()=>{if(s.hp===s.maxHp){msg('You are already at full health.');return}if(s.gold<2){msg('You need 2 Gold to rest.');return}s.gold-=2;s.hp=s.maxHp;msg('You rest at the inn and recover all HP.');draw()});
+  $('sword').addEventListener('click',()=>{if(s.sword)return;if(s.gold<12){msg('You need 12 Gold for the Iron Sword.');return}s.gold-=12;s.atk+=2;s.sword=true;msg('You equip the Iron Sword. Attack +2!');draw()});
+  $('armorBuy').addEventListener('click',()=>{if(s.armorBought)return;if(s.gold<10){msg('You need 10 Gold for Leather Armor.');return}s.gold-=10;s.armor++;s.armorBought=true;msg('You equip Leather Armor. Armor +1!');draw()});
+  $('restart').addEventListener('click',()=>{if(!confirm('Restart and erase your saved progress on this device?'))return;s=initial();msg('A new adventure begins.');draw()});
+  draw();
+})();
+</script>
+</body>
+</html>
